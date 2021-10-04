@@ -5,11 +5,17 @@
 #include <Firebase_ESP_Client.h>
 
 
+//DEFAULT_VALUE
+String idThisEsp = "36d57abd-7e84-4079-afc0-cc9693a6dd90";
+const char *ssidLocal = "SMART_HOME_ESP8266";
+const char *passwordLocal = "ppwikzovvhmvsxgsrnsxyahigwzgqhfg";
+/////
+
 //Global value
 bool isConnectWifi = false;
 String presubDataFirebase = "/esp/";
 String userIdGlobalValue = "";
-String codeGlobalValue = "";
+/////
 
 // FIREBAE CONFIG
 #define PROJECT_ID "htcdt-iot"
@@ -23,35 +29,143 @@ const char *tokenFirebase = "KbjQ9IW5NEZhcikz8mA4B5LYHWWYQJo3wOYnUWyp";
 FirebaseData fbdo;
 FirebaseAuth auth;
 FirebaseConfig config;
-///////////////////
+/////
 
 
-const char *ssidLocal = "hieuesp";
-const char *passwordLocal = "123456789";
-
-ESP8266WebServer server(80); // khởi tạo sever ở port 80
+ESP8266WebServer server(80); // Start server with port 80
 WiFiManager wifiManager;
 
 const char MAIN_page[] PROGMEM = R"=====(
+<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>ESP8266 kết nối WiFi bằng điện thoại</title>
+    <meta charset="UTF-8">
+    <title>Smart Home + ESP8266 kết nối WiFi bằng điện thoại</title>
+    <style>
+        body {
+            font-family: "Open Sans", sans-serif;
+            height: 100vh;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        @keyframes spinner {
+            0% { transform: rotateZ(0deg); }
+            100% { transform: rotateZ(359deg); }
+        }
+        div.wrapper {
+            display: flex;
+            align-items: center;
+            flex-direction: column; 
+            justify-content: center;
+            width: 100%;
+            min-height: 100%;
+            padding: 20px;
+            background: rgba(darken("#2196F3",40%), 0.85);
+        }
+        .login {
+            border-radius: 2px 2px 5px 5px;
+            padding: 10px 20px 20px 20px;
+            width: 90%;
+            max-width: 320px;
+            background: #ffffff;
+            position: relative;
+            padding-bottom: 80px;
+            box-shadow: 0px 1px 5px rgba(0,0,0,0.3);
+        }
+
+        input {
+            display: block;
+            padding: 15px 10px;
+            margin-bottom: 10px;
+            width: 100%;
+            border: 1px solid #ddd;
+            transition: border-width 0.2s ease;
+            border-radius: 2px;
+            color: #ccc;  
+        }
+
+        a {
+            font-size: 0.8em;   
+            color: #2196F3;
+            text-decoration: none;
+        }
+
+        .title {
+            color: #444;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 10px 0 30px 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        input.state {
+            width: 100%;
+            height: 100%;
+            padding: 10px 10px;
+            background: #2196F3;
+            color: #fff;
+            display: block;
+            border: none;
+            margin-top: 20px;
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            max-height: 60px;
+            border: 0px solid rgba(0,0,0,0.1);
+            border-radius: 0 0 2px 2px;
+            transform: rotateZ(0deg);
+            transition: all 0.1s ease-out;
+            border-bottom-width: 7px;
+        }
+
+        .spinner {
+            display: block;
+            width: 40px;
+            height: 40px;
+            position: absolute;
+            border: 4px solid #ffffff;
+            border-top-color: rgba(255,255,255,0.3);
+            border-radius: 100%;
+            left: 50%;
+            top: 0;
+            opacity: 0;
+            margin-left: -20px;
+            margin-top: -20px;
+            animation: spinner 0.6s infinite linear;
+            transition: top 0.3s 0.3s ease,
+                        opacity 0.3s 0.3s ease,
+                        border-radius 0.3s ease;
+            box-shadow: 0px 1px 0px rgba(0,0,0,0.2);
+        }
+
+        footer {
+            display: block;
+            padding-top: 50px;
+            text-align: center;
+            color: #ddd;
+            font-weight: normal;
+            text-shadow: 0px -1px 0px rgba(0,0,0,0.2);
+            font-size: 0.8em;
+        }
+            
+    </style>
 </head>
 <body>
 
-<form action="setup">
-  Tên wifi: <input name="ssid" type="text"/> <br><br>
-  Mật khẩu: <input name="password" type="text"/> <br>
-  Code: <input name="code" type="text"/> <br>
-  UserId: <input name="userId" type="text"/> <br>
-  <input type="submit"/>
-</form>
-  
-
+    <div class="wrapper">
+        <form class="login" action="setup">
+          <p class="title">Đăng nhập wifi cho module này</p>
+          <input type="text" placeholder="Tên wifi nhà bạn" autofocus name="ssid"/>
+          <input type="password" placeholder="Mật khẩu wifi nhà bạn" name="password" />
+          <input class="state" type="submit" value="Xác nhận"/>
+        </form>
+        <footer><a target="blank" href="http://google.com/">Smart Home IOT</a></footer>
+        </p>
+      </div>
 
 </body>
-
 </html>
 )=====";
 
@@ -63,21 +177,17 @@ void connectIpEspWhenConnectSuccess(){
   server.send(200,"text/html", "Helloword"); // Send HTML
 }
 
-void cleanEEProm (int isReset){
+void cleanEEProm (int from, int to){
   Serial.println("Start delete eeprom: ");
-  Serial.print(isReset);
 
-  if(isReset == 1) {
-     for (int i = 0; i < 200; ++i) {
-        EEPROM.write(i, 0);
-     };
-     
-     EEPROM.commit();
-     wifiManager.resetSettings();
-
-     Serial.println("Delete data eeprom success");
+  for (int i = from; i < to; ++i) {
+     EEPROM.write(i, 0);
   };
-  
+ 
+  EEPROM.commit();
+  wifiManager.resetSettings();
+
+  Serial.println("Delete data eeprom success");
   delay(3000);
 };
 
@@ -121,32 +231,21 @@ String readDataFromEeprom(int from, int to, String name){
 void setupEsp(){
   String ssidHomeWifi = server.arg("ssid");
   String password = server.arg("password");
-  String code = server.arg("code");
-  String userId = server.arg("userId");
   
   Serial.print("Name wifi:");
   Serial.println(ssidHomeWifi);
   Serial.print("Password:");
   Serial.println(password);
-  Serial.print("Code:");
-  Serial.println(code);
-  Serial.print("UserId:");
-  Serial.println(userId);
   
   if (ssidHomeWifi.length() > 0 && password.length() > 0) {
     Serial.println("Clean eeprom");
-    cleanEEProm(1);
+    cleanEEProm(0, 96);
     addDataToEeprom(0, "NAME WIFI", ssidHomeWifi);
     addDataToEeprom(32, "PASS WIFI", password);
-    addDataToEeprom(96, "CODE WIFI", code);
-    addDataToEeprom(160, "CODE WIFI", userId);
-    
     EEPROM.commit();
   };
   
   ESP.reset();
-
-//  server.send(200,"text/plain","đã kết nối thành công");
 }
 
 bool checkWifi(void)
@@ -168,6 +267,26 @@ bool checkWifi(void)
   Serial.println("");
   Serial.println("Connect wifi out of time !");
   return false;
+};
+
+
+String urlRequestGetUser = "/getuser/" + idThisEsp;
+String urlRequestSetUser = "/user/" + idThisEsp;  
+void handleGetUser(){
+  Serial.printf("Pass handleGetUser"); 
+  Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestGetUser, "false") ? "ok" : fbdo.errorReason().c_str());
+
+  String userId = Firebase.RTDB.getString(&fbdo, urlRequestSetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+
+  if(userId && (userId != "" || userId != " ")){
+    addDataToEeprom(96, "UserId", userId);
+    EEPROM.commit();
+
+    userIdGlobalValue = userId;
+
+    Serial.print("Save User id success: ");
+    Serial.println(userId);
+  };
 }
 
 void setupFirebase () {
@@ -191,12 +310,10 @@ void setup() {
   WiFi.mode(WIFI_STA); //(Set up a soft access point to establish a WiFi network)
 
 
-  cleanEEProm(0);
+  cleanEEProm(96, 160);
   
   String nameWifi = "";
   String password = "";
-  String code = "";
-  String userId = "";
   
   nameWifi = readDataFromEeprom(0, 32, "WIFI NAME");
   Serial.print("Name wifi: ");
@@ -208,18 +325,10 @@ void setup() {
   Serial.println(password);
   Serial.println();
 
-  code = readDataFromEeprom(96, 160, "CODE");
-  codeGlobalValue = code;
-  Serial.print("Code esp: ");
-  Serial.println(code);
+  userIdGlobalValue = readDataFromEeprom(96, 160, "User ID");
+  Serial.print("UserId: ");
+  Serial.println(userIdGlobalValue);
   Serial.println();
-
-  userId = readDataFromEeprom(160, 200, "USER_ID");
-  userIdGlobalValue = userId;
-  Serial.print("User Id: ");
-  Serial.println(userId);
-  Serial.println();
-
 
   WiFi.begin(nameWifi, password);
   
@@ -257,16 +366,15 @@ void setup() {
 
 void loop() {
  server.handleClient();
+ 
+
+ delay(2000);
 
  if(isConnectWifi){
-  Serial.println("Connect firebase: ");
-  String uriFirebase = presubDataFirebase + codeGlobalValue;
-
-  Serial.println(uriFirebase);
-  
-  Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  uriFirebase, "Hello word") ? "ok" : fbdo.errorReason().c_str());
-
-  Serial.printf("Get string... %s\n", Firebase.RTDB.getString(&fbdo, uriFirebase) ? fbdo.to<const char *>() : fbdo.errorReason().c_str());
-  delay(5000);
- }
+  Serial.print("userIdValue");
+   if(userIdGlobalValue == "" || userIdGlobalValue == " " || userIdGlobalValue == "null"){
+    handleGetUser(); 
+    delay(1000);
+   };
+  }
 }
