@@ -4,37 +4,7 @@
 #include <WiFiManager.h>
 #include <Firebase_ESP_Client.h>
 
-
-//DEFAULT_VALUE
-String idThisEsp = "36d57abd-7e84-4079-afc0-cc9693a6dd90";
-const char *ssidLocal = "SMART_HOME_ESP8266";
-const char *passwordLocal = "ppwikzovvhmvsxgsrnsxyahigwzgqhfg";
-/////
-
-//Global value
-bool isConnectWifi = false;
-String presubDataFirebase = "/esp/";
-String userIdGlobalValue = "";
-/////
-
-// FIREBAE CONFIG
-#define PROJECT_ID "htcdt-iot"
-
-const char *api_key = "7234a488911316bedff11c65c28f361954a97051";
-const char *emailFirebaseAdmin = "vuthanhhieu00@gmail.com";
-const char *passwordFirebaseAdmin = "vuthanhhieu2000";
-const char *database_url = "https://htcdt-iot-default-rtdb.firebaseio.com/";
-const char *tokenFirebase = "KbjQ9IW5NEZhcikz8mA4B5LYHWWYQJo3wOYnUWyp";
-
-FirebaseData fbdo;
-FirebaseAuth auth;
-FirebaseConfig config;
-/////
-
-
-ESP8266WebServer server(80); // Start server with port 80
-WiFiManager wifiManager;
-
+/*HTML Defind*/
 const char MAIN_page[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html>
@@ -168,6 +138,51 @@ const char MAIN_page[] PROGMEM = R"=====(
 </body>
 </html>
 )=====";
+/*------------------------------------------------------*/
+
+/*DEFAULT_VALUE*/
+String idThisEsp = "36d57abd-7e84-4079-afc0-cc9693a6dd90";
+const char *ssidLocal = "SMART_HOME_ESP8266";
+const char *passwordLocal = "ppwikzovvhmvsxgsrnsxyahigwzgqhfg";
+/*------------------------------------------------------*/
+
+/*Global value*/
+bool isConnectWifi = false;
+String presubDataFirebase = "/esp/";
+String userIdGlobalValue = "";
+String turnOnValue = "";
+String isResetEepromUserId = "";
+String isResetEeprom = "";
+/*------------------------------------------------------*/
+
+/*Firebase CONFIG*/
+#define PROJECT_ID "htcdt-iot"
+
+const char *api_key = "7234a488911316bedff11c65c28f361954a97051";
+const char *emailFirebaseAdmin = "vuthanhhieu00@gmail.com";
+const char *passwordFirebaseAdmin = "vuthanhhieu2000";
+const char *database_url = "https://htcdt-iot-default-rtdb.firebaseio.com/";
+const char *tokenFirebase = "KbjQ9IW5NEZhcikz8mA4B5LYHWWYQJo3wOYnUWyp";
+/*------------------------------------------------------
+
+/* Firebase defind */
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+/*------------------------------------------------------*/
+
+/*Firebase ref url*/
+String urlRequestGetUser = "/" + idThisEsp + "/isActive";
+String urlRequestSetUser = "/" + idThisEsp + "/setUser";
+String urlRequestConnectedUser = "/" + idThisEsp + "/isConnected";
+String urlRequestResetUserIdEeprom = "/" + idThisEsp + "/isResetUserIdEeprom";
+String urlRequestResetEeprom = "/" + idThisEsp + "/isResetEeprom";
+String urlRequestTurnOnOff = "/" + idThisEsp + "/isTurnOn";
+/*------------------------------------------------------*/
+
+
+ESP8266WebServer server(80); // Start server with port 80
+WiFiManager wifiManager;
 
 void connectIpEsp(){
   server.send(200,"text/html",MAIN_page); // Send HTML
@@ -188,7 +203,9 @@ void cleanEEProm (int from, int to){
   wifiManager.resetSettings();
 
   Serial.println("Delete data eeprom success");
-  delay(3000);
+  
+  delay(1000);
+  ESP.reset();
 };
 
 void addDataToEeprom (int pos, String name, String data) {
@@ -270,19 +287,21 @@ bool checkWifi(void)
 };
 
 
-String urlRequestGetUser = "/getuser/" + idThisEsp;
-String urlRequestSetUser = "/user/" + idThisEsp;  
 void handleGetUser(){
+  String isActice = Firebase.RTDB.getString(&fbdo, urlRequestGetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+  
   Serial.printf("Pass handleGetUser"); 
   Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestGetUser, "false") ? "ok" : fbdo.errorReason().c_str());
 
   String userId = Firebase.RTDB.getString(&fbdo, urlRequestSetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
 
-  if(userId && (userId != "" || userId != " ")){
+  if(userId && (userId != "" || userId != " ") && userId != "null" && userId != "connection lost"){
     addDataToEeprom(96, "UserId", userId);
     EEPROM.commit();
 
     userIdGlobalValue = userId;
+
+    Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestConnectedUser, "true") ? "ok" : fbdo.errorReason().c_str());
 
     Serial.print("Save User id success: ");
     Serial.println(userId);
@@ -290,7 +309,7 @@ void handleGetUser(){
 }
 
 void setupFirebase () {
-  Serial.println("Setup firebase: ");
+  Serial.println("Setup firebase !");
   config.api_key = api_key;
   auth.user.email = emailFirebaseAdmin;
   auth.user.password = passwordFirebaseAdmin;
@@ -298,7 +317,7 @@ void setupFirebase () {
   config.signer.tokens.legacy_token = tokenFirebase;
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
-  Serial.println("Success firebase: ");
+  Serial.println("Success firebase !");
 }
 
 void setup() {
@@ -308,9 +327,6 @@ void setup() {
   Serial.begin(9600);
   WiFi.disconnect();
   WiFi.mode(WIFI_STA); //(Set up a soft access point to establish a WiFi network)
-
-
-  cleanEEProm(96, 160);
   
   String nameWifi = "";
   String password = "";
@@ -364,17 +380,84 @@ void setup() {
   }
 }
 
+void handleTurnOnOff() {
+    String isTurnOn = Firebase.RTDB.getString(&fbdo, urlRequestTurnOnOff) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+
+    if(isTurnOn == "true" && turnOnValue != isTurnOn) {
+      Serial.println("Turn on");
+      turnOnValue = isTurnOn;
+    };
+    
+    if(isTurnOn == "false" && turnOnValue != isTurnOn){
+      Serial.println("Turn off");
+      turnOnValue = isTurnOn;
+    };
+
+    delay(1000);
+}
+
+void handleResetUserIdEeprom() {
+    String isReset = Firebase.RTDB.getString(&fbdo, urlRequestResetUserIdEeprom) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+
+    
+    if(isReset == "true" && isReset != isResetEepromUserId){
+      Serial.print("Reset userId in eeprom: ");
+      Serial.println(isReset);
+      
+      isResetEepromUserId = isReset;
+      
+      Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestResetUserIdEeprom, "false") ? "Is reset userId in the eeprom" : fbdo.errorReason().c_str());
+
+      if(isReset != "connection lost") {
+        cleanEEProm(96, 160);
+      };
+    };
+
+    if(isReset == "false" && isReset != isResetEepromUserId){
+      Serial.print("Reset userId in eeprom: ");
+      Serial.println(isReset);
+      isResetEepromUserId = isReset;
+    };
+}
+
+void handleResetEeprom() {
+    String isReset = Firebase.RTDB.getString(&fbdo, urlRequestResetEeprom) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+
+    
+    if(isReset == "true" && isReset != isResetEepromUserId){
+      Serial.print("Reset eeprom: ");
+      Serial.println(isReset);
+      
+      isResetEepromUserId = isReset;
+      
+      Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestResetEeprom, "false") ? "Is reset userId in the eeprom" : fbdo.errorReason().c_str());
+
+      if(isReset != "connection lost") {
+        cleanEEProm(96, 160);
+      };
+    };
+
+    if(isReset == "false" && isReset != isResetEeprom){
+      Serial.print("Reset eeprom: ");
+      Serial.println(isReset);
+      isResetEeprom = isReset;
+    };
+}
+
 void loop() {
  server.handleClient();
- 
-
- delay(2000);
-
  if(isConnectWifi){
-  Serial.print("userIdValue");
-   if(userIdGlobalValue == "" || userIdGlobalValue == " " || userIdGlobalValue == "null"){
-    handleGetUser(); 
-    delay(1000);
-   };
+    /*Reset user eeprom*/
+    handleTurnOnOff();
+    handleResetUserIdEeprom();
+    handleResetEeprom();
+    
+    
+    if(userIdGlobalValue == "" || userIdGlobalValue == " " || userIdGlobalValue == "null"){
+      Serial.println("userIdValue ...");
+      handleGetUser(); 
+    }
   }
+
+  delay(1000);
 }
