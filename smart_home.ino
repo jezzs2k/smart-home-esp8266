@@ -156,13 +156,13 @@ String isResetEeprom = "";
 /*------------------------------------------------------*/
 
 /*Firebase CONFIG*/
-#define PROJECT_ID "htcdt-iot"
+#define PROJECT_ID "smart-home-87480"
 
-const char *api_key = "7234a488911316bedff11c65c28f361954a97051";
-const char *emailFirebaseAdmin = "vuthanhhieu00@gmail.com";
-const char *passwordFirebaseAdmin = "vuthanhhieu2000";
-const char *database_url = "https://htcdt-iot-default-rtdb.firebaseio.com/";
-const char *tokenFirebase = "KbjQ9IW5NEZhcikz8mA4B5LYHWWYQJo3wOYnUWyp";
+const char *api_key = "AIzaSyA4MflFmphgSw0Ae8mKwkh8_i6np4n8iK8";
+const char *emailFirebaseAdmin = "hieu.opentechiz@gmail.com";
+const char *passwordFirebaseAdmin = "Vuthanhhieu2000+";
+const char *database_url = "https://smart-home-87480-default-rtdb.firebaseio.com/";
+const char *tokenFirebase = "QiKnkj3hlR4qaUfjvn631IeCEwPrXQFAhuMUihnV";
 /*------------------------------------------------------
 
 /* Firebase defind */
