@@ -21,11 +21,11 @@ String codeGlobalValue = "";
 ## Firebase Config
 
 ```
-Api_key = "7234a488911316bedff11c65c28f361954a97051";
-EmailFirebaseAdmin = "vuthanhhieu00@gmail.com";
-PasswordFirebaseAdmin = "vuthanhhieu2000";
-Database_url = "https://htcdt-iot-default-rtdb.firebaseio.com/";
-TokenFirebase = "KbjQ9IW5NEZhcikz8mA4B5LYHWWYQJo3wOYnUWyp";
+Api_key = "AIzaSyA4MflFmphgSw0Ae8mKwkh8_i6np4n8iK8";
+EmailFirebaseAdmin = "hieu.opentechiz@gmail.com";
+PasswordFirebaseAdmin = "Vuthanhhieu2000+";
+Database_url = "https://smart-home-87480-default-rtdb.firebaseio.com/";
+TokenFirebase = "QiKnkj3hlR4qaUfjvn631IeCEwPrXQFAhuMUihnV";
 ```
 
 ## HTML file to setup connect wifi
