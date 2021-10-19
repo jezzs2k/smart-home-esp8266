@@ -143,7 +143,8 @@ const char MAIN_page[] PROGMEM = R"=====(
 /*DEFAULT_VALUE*/
 String idThisEsp = "36d57abd-7e84-4079-afc0-cc9693a6dd90";
 const char *ssidLocal = "SMART_HOME_ESP8266";
-const char *passwordLocal = "ppwikzovvhmvsxgsrnsxyahigwzgqhfg";
+const char *passwordLocal = "11111111";
+int maxSizeEeprom = 160;
 /*------------------------------------------------------*/
 
 /*Global value*/
@@ -153,6 +154,7 @@ String userIdGlobalValue = "";
 String turnOnValue = "";
 String isResetEepromUserId = "";
 String isResetEeprom = "";
+bool isCheckExistEsp = false;
 /*------------------------------------------------------*/
 
 /*Firebase CONFIG*/
@@ -173,11 +175,13 @@ FirebaseConfig config;
 
 /*Firebase ref url*/
 String urlRequestGetUser = "/" + idThisEsp + "/isActive";
+String urlRequestGetUserError = "/" + idThisEsp + "/isError";
 String urlRequestSetUser = "/" + idThisEsp + "/setUser";
 String urlRequestConnectedUser = "/" + idThisEsp + "/isConnected";
 String urlRequestResetUserIdEeprom = "/" + idThisEsp + "/isResetUserIdEeprom";
 String urlRequestResetEeprom = "/" + idThisEsp + "/isResetEeprom";
 String urlRequestTurnOnOff = "/" + idThisEsp + "/isTurnOn";
+String urlCheckEspExistOnFirebase = "/" + idThisEsp;
 /*------------------------------------------------------*/
 
 
@@ -192,7 +196,7 @@ void connectIpEspWhenConnectSuccess(){
   server.send(200,"text/html", "Helloword"); // Send HTML
 }
 
-void cleanEEProm (int from, int to){
+void cleanEEProm (int from, int to, bool isResetEsp = true){
   Serial.println("Start delete eeprom: ");
 
   for (int i = from; i < to; ++i) {
@@ -204,8 +208,11 @@ void cleanEEProm (int from, int to){
 
   Serial.println("Delete data eeprom success");
   
-  delay(1000);
-  ESP.reset();
+  delay(2000);
+
+  if(isResetEsp) {
+    ESP.reset(); 
+  }
 };
 
 void addDataToEeprom (int pos, String name, String data) {
@@ -253,10 +260,10 @@ void setupEsp(){
   Serial.println(ssidHomeWifi);
   Serial.print("Password:");
   Serial.println(password);
-  
-  if (ssidHomeWifi.length() > 0 && password.length() > 0) {
+
+  if (ssidHomeWifi && password && ssidHomeWifi.length() > 0 && password.length() > 0) {
     Serial.println("Clean eeprom");
-    cleanEEProm(0, 96);
+    cleanEEProm(0, maxSizeEeprom, false);
     addDataToEeprom(0, "NAME WIFI", ssidHomeWifi);
     addDataToEeprom(32, "PASS WIFI", password);
     EEPROM.commit();
@@ -289,13 +296,13 @@ bool checkWifi(void)
 
 void handleGetUser(){
   String isActice = Firebase.RTDB.getString(&fbdo, urlRequestGetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
-  
+
   Serial.printf("Pass handleGetUser"); 
   Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestGetUser, "false") ? "ok" : fbdo.errorReason().c_str());
 
   String userId = Firebase.RTDB.getString(&fbdo, urlRequestSetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
 
-  if(userId && (userId != "" || userId != " ") && userId != "null" && userId != "connection lost"){
+  if(userId && (userId != "" || userId != " ") && userId != "null" && userId != "connection lost" && userId != "false"){
     addDataToEeprom(96, "UserId", userId);
     EEPROM.commit();
 
@@ -320,6 +327,12 @@ void setupFirebase () {
   Serial.println("Success firebase !");
 }
 
+void setupLedStatus () {
+  pinMode(D6, OUTPUT);
+  pinMode(D5, INPUT);
+  digitalWrite(D6,HIGH);
+}
+
 void setup() {
   pinMode(13,OUTPUT); //  green led
   pinMode(15,OUTPUT); //  red led
@@ -330,7 +343,7 @@ void setup() {
   
   String nameWifi = "";
   String password = "";
-  
+
   nameWifi = readDataFromEeprom(0, 32, "WIFI NAME");
   Serial.print("Name wifi: ");
   Serial.println(nameWifi);
@@ -341,12 +354,14 @@ void setup() {
   Serial.println(password);
   Serial.println();
 
-  userIdGlobalValue = readDataFromEeprom(96, 160, "User ID");
+  userIdGlobalValue = readDataFromEeprom(96, maxSizeEeprom, "User ID");
   Serial.print("UserId: ");
   Serial.println(userIdGlobalValue);
   Serial.println();
 
   WiFi.begin(nameWifi, password);
+
+  setupLedStatus();
   
   if (checkWifi())
   {
@@ -386,11 +401,13 @@ void handleTurnOnOff() {
     if(isTurnOn == "true" && turnOnValue != isTurnOn) {
       Serial.println("Turn on");
       turnOnValue = isTurnOn;
+      digitalWrite(D6, HIGH);
     };
     
     if(isTurnOn == "false" && turnOnValue != isTurnOn){
       Serial.println("Turn off");
       turnOnValue = isTurnOn;
+       digitalWrite(D6, LOW);
     };
 
     delay(1000);
@@ -409,7 +426,7 @@ void handleResetUserIdEeprom() {
       Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestResetUserIdEeprom, "false") ? "Is reset userId in the eeprom" : fbdo.errorReason().c_str());
 
       if(isReset != "connection lost") {
-        cleanEEProm(96, 160);
+        cleanEEProm(96, maxSizeEeprom);
       };
     };
 
@@ -433,7 +450,7 @@ void handleResetEeprom() {
       Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestResetEeprom, "false") ? "Is reset userId in the eeprom" : fbdo.errorReason().c_str());
 
       if(isReset != "connection lost") {
-        cleanEEProm(96, 160);
+        cleanEEProm(0, maxSizeEeprom);
       };
     };
 
@@ -444,8 +461,31 @@ void handleResetEeprom() {
     };
 }
 
+void handleCheckEspExistOnFirebase () {
+    String urlCheckEspExistOnFirebase = "/" + idThisEsp;
+    String checkEsp = Firebase.RTDB.getString(&fbdo, urlCheckEspExistOnFirebase) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+
+    Serial.println("check esp ...");
+    Serial.println(checkEsp);
+    isCheckExistEsp = true;
+    if(checkEsp == "null") {
+      cleanEEProm(0, 160);
+    };
+}
+
+void handleLedD6Status () {
+  bool button_pin5 = digitalRead(D5);
+  if (button_pin5 == 0){
+    digitalWrite(D6, LOW);
+  }
+  if (button_pin5 == 1){
+    digitalWrite(D6, HIGH);
+  }
+}
+
 void loop() {
  server.handleClient();
+ handleLedD6Status();
  if(isConnectWifi){
     /*Reset user eeprom*/
     handleTurnOnOff();
@@ -457,7 +497,11 @@ void loop() {
       Serial.println("userIdValue ...");
       handleGetUser(); 
     }
+
+    if(isCheckExistEsp == false) {
+      handleCheckEspExistOnFirebase();
+    }
   }
 
-  delay(1000);
+  delay(500);
 }
