@@ -141,7 +141,7 @@ const char MAIN_page[] PROGMEM = R"=====(
 /*------------------------------------------------------*/
 
 /*DEFAULT_VALUE*/
-String idThisEsp = "36d57abd-7e84-4079-afc0-cc9693a6dd90";
+String idThisEsp = "62200f8c-35be-11ec-8d3d-0242ac130003";
 const char *ssidLocal = "SMART_HOME_ESP8266";
 const char *passwordLocal = "11111111";
 int maxSizeEeprom = 160;
@@ -207,8 +207,6 @@ void cleanEEProm (int from, int to, bool isResetEsp = true){
   wifiManager.resetSettings();
 
   Serial.println("Delete data eeprom success");
-  
-  delay(2000);
 
   if(isResetEsp) {
     ESP.reset(); 
@@ -409,8 +407,6 @@ void handleTurnOnOff() {
       turnOnValue = isTurnOn;
        digitalWrite(D6, LOW);
     };
-
-    delay(1000);
 }
 
 void handleResetUserIdEeprom() {
@@ -502,6 +498,4 @@ void loop() {
       handleCheckEspExistOnFirebase();
     }
   }
-
-  delay(500);
 }
