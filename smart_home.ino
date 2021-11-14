@@ -141,7 +141,8 @@ const char MAIN_page[] PROGMEM = R"=====(
 /*------------------------------------------------------*/
 
 /*DEFAULT_VALUE*/
-String idThisEsp = "62200f8c-35be-11ec-8d3d-0242ac130003";
+/*{"ssid":"SMART_HOME_ESP8266","password":"11111111","idEsp":"36d57abd-7e84-4079-afc0-cc9693a6dd90"}*/
+String idThisEsp = "cea9b38c-446a-11ec-81d3-0242ac130003";
 const char *ssidLocal = "SMART_HOME_ESP8266";
 const char *passwordLocal = "11111111";
 int maxSizeEeprom = 160;
@@ -175,7 +176,6 @@ FirebaseConfig config;
 
 /*Firebase ref url*/
 String urlRequestGetUser = "/" + idThisEsp + "/isActive";
-String urlRequestSetNewItem = "/" + idThisEsp + "/isNewItem";
 String urlRequestGetUserError = "/" + idThisEsp + "/isError";
 String urlRequestSetUser = "/" + idThisEsp + "/setUser";
 String urlRequestConnectedUser = "/" + idThisEsp + "/isConnected";
@@ -298,7 +298,6 @@ void handleGetUser(){
 
   Serial.printf("Pass handleGetUser"); 
   Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestGetUser, "false") ? "ok" : fbdo.errorReason().c_str());
-    Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestSetNewItem, "true") ? "ok" : fbdo.errorReason().c_str());
 
   String userId = Firebase.RTDB.getString(&fbdo, urlRequestSetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
 
