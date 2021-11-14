@@ -7,6 +7,11 @@
 - Install WifiManger: https://github.com/tzapu/WiFiManager in to LIB + Add lib by .zip file
 - Install Firebase-ESP-Client : https://github.com/mobizt/Firebase-ESP-Client + Add lib by .zip file 
 
+## Generate QR CODE
+- URL: https://vi.qr-code-generator.com/
+- Gen ID URL: https://www.uuidgenerator.net/
+- Text add inside the code QR: {"ssid":"SMART_HOME_ESP8266","password":"11111111","idEsp":"36d57abd-7e84-4079-afc0-cc9693a6dd90"}
+
 ## Libraries
 ```
 #include <ESP8266WebServer.h>
