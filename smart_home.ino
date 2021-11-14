@@ -482,7 +482,7 @@ void handleLedD6Status () {
 
 void loop() {
  server.handleClient();
- handleLedD6Status();
+//  handleLedD6Status();
  if(isConnectWifi){
     /*Reset user eeprom*/
     handleTurnOnOff();
