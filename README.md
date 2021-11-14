@@ -1,5 +1,11 @@
 ### SmartHome with esp8266 module
 
+## Setup ESP
+- Open Arduno and go to Preferences
+- Enter http://arduino.esp8266.com/stable/package_esp8266com_index.json into Additional Board Manager URLs
+- Install ESP8266 from Tools/Boards Manager and then choose NODE_MCU 1.0
+- Install WifiManger: https://github.com/tzapu/WiFiManager in to LIB + Add lib by .zip file
+- Install Firebase-ESP-Client : https://github.com/mobizt/Firebase-ESP-Client + Add lib by .zip file 
 
 ## Libraries
 ```
