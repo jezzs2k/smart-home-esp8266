@@ -175,6 +175,7 @@ FirebaseConfig config;
 
 /*Firebase ref url*/
 String urlRequestGetUser = "/" + idThisEsp + "/isActive";
+String urlRequestSetNewItem = "/" + idThisEsp + "/isNewItem";
 String urlRequestGetUserError = "/" + idThisEsp + "/isError";
 String urlRequestSetUser = "/" + idThisEsp + "/setUser";
 String urlRequestConnectedUser = "/" + idThisEsp + "/isConnected";
@@ -297,6 +298,7 @@ void handleGetUser(){
 
   Serial.printf("Pass handleGetUser"); 
   Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestGetUser, "false") ? "ok" : fbdo.errorReason().c_str());
+    Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestSetNewItem, "true") ? "ok" : fbdo.errorReason().c_str());
 
   String userId = Firebase.RTDB.getString(&fbdo, urlRequestSetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
 
