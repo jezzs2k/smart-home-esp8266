@@ -372,8 +372,6 @@ void setup() {
     Serial.println("Connect successfully");
     Serial.print("IP:");
     Serial.println(WiFi.localIP());
-
-//    setupFirebase();
     
     server.on("/", connectIpEspWhenConnectSuccess);
     server.begin(); //Run server
@@ -411,30 +409,6 @@ void handleTurnOnOff() {
       Serial.println("Turn off");
       turnOnValue = isTurnOn;
        digitalWrite(D6, LOW);
-    };
-}
-
-void handleResetUserIdEeprom() {
-    String isReset = Firebase.RTDB.getString(&fbdo, urlRequestResetUserIdEeprom) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
-
-    
-    if(isReset == "true" && isReset != isResetEepromUserId){
-      Serial.print("Reset userId in eeprom: ");
-      Serial.println(isReset);
-      
-      isResetEepromUserId = isReset;
-      
-      Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestResetUserIdEeprom, "false") ? "Is reset userId in the eeprom" : fbdo.errorReason().c_str());
-
-      if(isReset != "connection lost") {
-        cleanEEProm(96, maxSizeEeprom);
-      };
-    };
-
-    if(isReset == "false" && isReset != isResetEepromUserId){
-      Serial.print("Reset userId in eeprom: ");
-      Serial.println(isReset);
-      isResetEepromUserId = isReset;
     };
 }
 
@@ -523,7 +497,6 @@ void loop() {
       
       if(isSetupURL){
         handleTurnOnOff();
-        handleResetUserIdEeprom();
         handleResetEeprom();  
       };
 
@@ -536,10 +509,14 @@ void loop() {
            handleGetUser(); 
         }
       }
-     }
 
-     if(isConnectedEspWithFirebase == false && userIdGlobalValue){
-      handleCheckConnected();
+      if(isCheckExistEsp == false) {
+        handleCheckEspExistOnFirebase();
+      }
+
+       if(isCheckExistEsp && isConnectedEspWithFirebase == false && userIdGlobalValue){
+        handleCheckConnected();
+       }
      }
 
     if(idThisEsp != "" && isFirebaseConnected == false){
