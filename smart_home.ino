@@ -294,19 +294,22 @@ void handleGetUser(){
   String isActice = Firebase.RTDB.getString(&fbdo, urlRequestGetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
 
   Serial.printf("Pass handleGetUser"); 
-  Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestGetUser, "false") ? "ok" : fbdo.errorReason().c_str());
-  Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestSetNewItem, "true") ? "ok" : fbdo.errorReason().c_str());
+  Serial.println(isActice); 
+  if(isActice == "true") {
+    Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestGetUser, "false") ? "ok" : fbdo.errorReason().c_str());
+    Serial.printf("Set string... %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestSetNewItem, "true") ? "ok" : fbdo.errorReason().c_str());
 
-  String userId = Firebase.RTDB.getString(&fbdo, urlRequestSetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+     String userId = Firebase.RTDB.getString(&fbdo, urlRequestSetUser) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
 
-  if(userId && (userId != "" || userId != " ") && userId != "null" && userId != "connection lost" && userId != "false"){
-    Serial.print("Save User id success: ");
-    Serial.println(userId);
-    addDataToEeprom(160, "UserId", userId);
-    EEPROM.commit();
-
-    userIdGlobalValue = userId;
-  };
+    if(userId && (userId != "" || userId != " ") && userId != "null" && userId != "connection lost" && userId != "false"){
+      Serial.print("Save User id success: ");
+      Serial.println(userId);
+      addDataToEeprom(160, "UserId", userId);
+  
+      userIdGlobalValue = userId;
+      EEPROM.commit();
+    };
+  }
 }
 
 void setupFirebase () {
@@ -498,25 +501,17 @@ void loop() {
       if(isSetupURL){
         handleTurnOnOff();
         handleResetEeprom();  
+
+       if(isCheckExistEsp == false) {
+          handleCheckEspExistOnFirebase();
+        }
+
+        if(isCheckExistEsp && isConnectedEspWithFirebase == false && userIdGlobalValue){
+         handleCheckConnected();
+        } 
       };
 
-    
-      
-      
-      if(userIdGlobalValue == "" || userIdGlobalValue == " " || userIdGlobalValue == "null"){
-        if(isSetupURL){
-           Serial.println("userIdValue ...");
-           handleGetUser(); 
-        }
-      }
-
-      if(isCheckExistEsp == false) {
-        handleCheckEspExistOnFirebase();
-      }
-
-       if(isCheckExistEsp && isConnectedEspWithFirebase == false && userIdGlobalValue){
-        handleCheckConnected();
-       }
+     
      }
 
     if(idThisEsp != "" && isFirebaseConnected == false){
