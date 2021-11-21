@@ -1,136 +1,26 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266WiFi.h>
+#include <SD.h>
 #include <EEPROM.h>
 #include <WiFiManager.h>
 #include <Firebase_ESP_Client.h>
+#include <HTML.h>
+#include <PZEM004Tv30.h>
 
-/*HTML Defind*/
-const char MAIN_page[] PROGMEM = R"=====(
-<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <title>Smart Home + ESP8266 kết nối WiFi bằng điện thoại</title>
-    <style>
-        body {
-            font-family: "Open Sans", sans-serif;
-            height: 100vh;
-        }
-        * {
-            box-sizing: border-box;
-        }
-        @keyframes spinner {
-            0% { transform: rotateZ(0deg); }
-            100% { transform: rotateZ(359deg); }
-        }
-        div.wrapper {
-            display: flex;
-            align-items: center;
-            flex-direction: column; 
-            justify-content: center;
-            width: 100%;
-            min-height: 100%;
-            padding: 20px;
-            background: rgba(darken("#2196F3",40%), 0.85);
-        }
-        .login {
-            border-radius: 2px 2px 5px 5px;
-            padding: 10px 20px 20px 20px;
-            width: 90%;
-            max-width: 320px;
-            background: #ffffff;
-            position: relative;
-            padding-bottom: 80px;
-            box-shadow: 0px 1px 5px rgba(0,0,0,0.3);
-        }
-        input {
-            display: block;
-            padding: 15px 10px;
-            margin-bottom: 10px;
-            width: 100%;
-            border: 1px solid #ddd;
-            transition: border-width 0.2s ease;
-            border-radius: 2px;
-            color: #ccc;  
-        }
-        a {
-            font-size: 0.8em;   
-            color: #2196F3;
-            text-decoration: none;
-        }
-        .title {
-            color: #444;
-            font-size: 1.2em;
-            font-weight: bold;
-            margin: 10px 0 30px 0;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 20px;
-        }
-        input.state {
-            width: 100%;
-            height: 100%;
-            padding: 10px 10px;
-            background: #2196F3;
-            color: #fff;
-            display: block;
-            border: none;
-            margin-top: 20px;
-            position: absolute;
-            left: 0;
-            bottom: 0;
-            max-height: 60px;
-            border: 0px solid rgba(0,0,0,0.1);
-            border-radius: 0 0 2px 2px;
-            transform: rotateZ(0deg);
-            transition: all 0.1s ease-out;
-            border-bottom-width: 7px;
-        }
-        .spinner {
-            display: block;
-            width: 40px;
-            height: 40px;
-            position: absolute;
-            border: 4px solid #ffffff;
-            border-top-color: rgba(255,255,255,0.3);
-            border-radius: 100%;
-            left: 50%;
-            top: 0;
-            opacity: 0;
-            margin-left: -20px;
-            margin-top: -20px;
-            animation: spinner 0.6s infinite linear;
-            transition: top 0.3s 0.3s ease,
-                        opacity 0.3s 0.3s ease,
-                        border-radius 0.3s ease;
-            box-shadow: 0px 1px 0px rgba(0,0,0,0.2);
-        }
-        footer {
-            display: block;
-            padding-top: 50px;
-            text-align: center;
-            color: #ddd;
-            font-weight: normal;
-            text-shadow: 0px -1px 0px rgba(0,0,0,0.2);
-            font-size: 0.8em;
-        }
-            
-    </style>
-</head>
-<body>
-    <div class="wrapper">
-        <form class="login" action="setup">
-          <p class="title">Đăng nhập wifi cho module này</p>
-          <input type="text" placeholder="Tên wifi nhà bạn" autofocus name="ssid"/>
-          <input type="password" placeholder="Mật khẩu wifi nhà bạn" name="password" />
-          <input class="state" type="submit" value="Xác nhận"/>
-        </form>
-        <footer><a target="blank" href="http://google.com/">Smart Home IOT</a></footer>
-        </p>
-      </div>
-</body>
-</html>
-)=====";
+/*Setup PZEM*/
+/* Use software serial for the PZEM
+   Pin 4 Rx (Connects to the Tx pin on the PZEM)
+   Pin 5 Tx (Connects to the Rx pin on the PZEM)
+*/
+#define PZEM_RX_PIN 4
+#define PZEM_TX_PIN 5
+PZEM004Tv30 pzem(PZEM_RX_PIN, PZEM_TX_PIN);
+
+//Variable delay real time
+unsigned long t1 = 0;
+
 /*------------------------------------------------------*/
+
 //{"ssid":"SMART_HOME_ESP8266","password":"11111111","idEsp":"b0706e84-4513-11ec-81d3-0242ac130005"}
 /*DEFAULT_VALUE*/
 String idThisEsp = "";
@@ -177,6 +67,8 @@ String urlRequestResetUserIdEeprom = "";
 String urlRequestResetEeprom = "";
 String urlRequestTurnOnOff = "";
 String urlCheckEspExistOnFirebase = "";
+String urlRequestEnrgy = "";
+String urlSetEnrgy = "";
 /*------------------------------------------------------*/
 
 
@@ -335,7 +227,7 @@ void setup() {
   pinMode(13,OUTPUT); //  green led
   pinMode(15,OUTPUT); //  red led
   EEPROM.begin(512); //Initialasing EEPROM
-  Serial.begin(9600);
+  Serial.begin(115200);
   WiFi.disconnect();
   WiFi.mode(WIFI_STA); //(Set up a soft access point to establish a WiFi network)
   
@@ -474,6 +366,8 @@ void handleSetupURL(String idEsp) {
   urlRequestResetEeprom =  "/" + id + "/isResetEeprom";
   urlRequestTurnOnOff = "/" + id + "/isTurnOn";
   urlCheckEspExistOnFirebase = "/" + id;
+  urlRequestEnrgy = "/" + id + "/isResetEnergy";
+  urlSetEnrgy = "/" + id + "/energy";
   isSetupURL = true;
   Serial.println("Setup url ok");
   Serial.println(id.length());
@@ -489,6 +383,102 @@ void handleCheckConnected(){
   };
    
 }
+
+/*Format JSON*/
+String formatJsonString(String key, int value, String src){  
+  src = src + key + ":" + (String)value + ",";
+
+  return src;
+}
+
+
+/*PZEM*/
+void dataElectricityMeter(){
+  String src = "{";
+  if( millis() - t1 > 2000){
+    Serial.print("Custom Address:");
+    Serial.println(pzem.readAddress(), HEX);
+    
+    //Reset the data of energy
+    String isResetEnergy = Firebase.RTDB.getString(&fbdo, urlRequestEnrgy) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+    if(Serial.available()){
+      char c = Serial.read();
+      if(c == '1'){
+        pzem.resetEnergy();
+      }
+    }
+    
+    // Read the data from the sensor
+    
+    float voltage = pzem.voltage();
+    float current = pzem.current();
+    float power = pzem.power();
+    float energy = pzem.energy();
+    float frequency = pzem.frequency();
+    float pf = pzem.pf();
+    
+    unsigned long electricityBill = 0;
+    unsigned int bac1 = 1678, bac2 = 1734, bac3 = 2014, bac4 = 2536, bac5 = 2834, bac6 = 2927;
+   
+    if(energy <= 50){
+      electricityBill += energy*bac1;
+    }
+    else if(energy <= 100){
+      electricityBill += (energy - 50)*bac2 + 50*bac1;
+    }   
+    else if(energy <= 200){
+      electricityBill += (energy - 100)*bac3 + 50*bac2 + 50*bac1;
+    }
+    else if(energy <= 300){
+      electricityBill += (energy - 200)*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
+    }
+    else if(energy <= 400){
+      electricityBill += (energy - 300)*bac5 + 100*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
+    }
+    else{
+      electricityBill += (energy - 400)*bac6 + 100*bac5 + 100*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
+    }
+
+    // Check if the data is valid
+    if (isnan(voltage)) {
+      Serial.println("Error reading voltage");
+    } else if (isnan(current)) {
+      Serial.println("Error reading current");
+    } else if (isnan(power)) {
+      Serial.println("Error reading power");
+    } else if (isnan(energy)) {
+      Serial.println("Error reading energy");
+    } else if (isnan(frequency)) {
+      Serial.println("Error reading frequency");
+    } else if (isnan(pf)) {
+      Serial.println("Error reading power factor");
+    } else {
+      src = formatJsonString("voltage", voltage, src);
+      src = formatJsonString("current", current, src);
+      src = formatJsonString("power", power, src);
+      src = formatJsonString("energytage", energy, src);
+      src = formatJsonString("pf", pf, src);
+      src = formatJsonString("frequency", frequency, src);
+      src = formatJsonString("electricityBill", electricityBill, src);
+      src = src + "}";
+
+      Serial.println(src);
+
+      Serial.printf("Set string.Enrgy %s\n", Firebase.RTDB.setString(&fbdo,  urlSetEnrgy, src) ? "ok" : fbdo.errorReason().c_str()); 
+      
+      Serial.print("Voltage: ");      Serial.print(voltage);      Serial.println("V");
+      Serial.print("Current: ");      Serial.print(current);      Serial.println("A");
+      Serial.print("Power: ");        Serial.print(power);        Serial.println("W");
+      Serial.print("Energy: ");       Serial.print(energy, 3);     Serial.println("kWh");
+      Serial.print("Frequency: ");    Serial.print(frequency, 1); Serial.println("Hz");
+      Serial.print("PF: ");           Serial.println(pf);
+      Serial.print("Electricity bill: ");    Serial.print(electricityBill); Serial.println("VND");
+    }
+    Serial.println();
+    t1 = millis();
+  }
+}
+
 
 void loop() {
  server.handleClient();
@@ -509,6 +499,8 @@ void loop() {
         if(isCheckExistEsp && isConnectedEspWithFirebase == false && userIdGlobalValue){
          handleCheckConnected();
         } 
+
+        dataElectricityMeter();
       };
 
      
