@@ -294,6 +294,10 @@ void setup() {
 void handleTurnOnOff() {
     String isTurnOn = Firebase.RTDB.getString(&fbdo, urlRequestTurnOnOff) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
 
+    if(isTurnOn == "true"){
+      dataElectricityMeter(); 
+    };
+
     if(isTurnOn == "true" && turnOnValue != isTurnOn) {
       Serial.println("Turn on");
       turnOnValue = isTurnOn;
@@ -393,90 +397,111 @@ String formatJsonString(String key, int value, String src){
 
 
 /*PZEM*/
+ int voltage = 0, current = 100, power = 200, energytage = 300, pf = 400, frequency = 500, electricityBill = 1000;
 void dataElectricityMeter(){
-  String src = "{";
-  if( millis() - t1 > 2000){
-    Serial.print("Custom Address:");
-    Serial.println(pzem.readAddress(), HEX);
-    
-    //Reset the data of energy
-    String isResetEnergy = Firebase.RTDB.getString(&fbdo, urlRequestEnrgy) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
-    if(Serial.available()){
-      char c = Serial.read();
-      if(c == '1'){
-        pzem.resetEnergy();
-      }
-    }
-    
-    // Read the data from the sensor
-    
-    float voltage = pzem.voltage();
-    float current = pzem.current();
-    float power = pzem.power();
-    float energy = pzem.energy();
-    float frequency = pzem.frequency();
-    float pf = pzem.pf();
-    
-    unsigned long electricityBill = 0;
-    unsigned int bac1 = 1678, bac2 = 1734, bac3 = 2014, bac4 = 2536, bac5 = 2834, bac6 = 2927;
-   
-    if(energy <= 50){
-      electricityBill += energy*bac1;
-    }
-    else if(energy <= 100){
-      electricityBill += (energy - 50)*bac2 + 50*bac1;
-    }   
-    else if(energy <= 200){
-      electricityBill += (energy - 100)*bac3 + 50*bac2 + 50*bac1;
-    }
-    else if(energy <= 300){
-      electricityBill += (energy - 200)*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
-    }
-    else if(energy <= 400){
-      electricityBill += (energy - 300)*bac5 + 100*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
-    }
-    else{
-      electricityBill += (energy - 400)*bac6 + 100*bac5 + 100*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
-    }
+  // String src = "{";
 
-    // Check if the data is valid
-    if (isnan(voltage)) {
-      Serial.println("Error reading voltage");
-    } else if (isnan(current)) {
-      Serial.println("Error reading current");
-    } else if (isnan(power)) {
-      Serial.println("Error reading power");
-    } else if (isnan(energy)) {
-      Serial.println("Error reading energy");
-    } else if (isnan(frequency)) {
-      Serial.println("Error reading frequency");
-    } else if (isnan(pf)) {
-      Serial.println("Error reading power factor");
-    } else {
-      src = formatJsonString("voltage", voltage, src);
-      src = formatJsonString("current", current, src);
-      src = formatJsonString("power", power, src);
-      src = formatJsonString("energytage", energy, src);
-      src = formatJsonString("pf", pf, src);
-      src = formatJsonString("frequency", frequency, src);
-      src = formatJsonString("electricityBill", electricityBill, src);
-      src = src + "}";
+ 
 
-      Serial.println(src);
+  // src = formatJsonString("voltage", voltage++, src);
+  // src = formatJsonString("current", current++, src);
+  // src = formatJsonString("power", power++, src);
+  // src = formatJsonString("energytage", energytage++, src);
+  // src = formatJsonString("pf", pf++, src);
+  // src = formatJsonString("frequency", frequency++, src);
+  // src = formatJsonString("electricityBill", electricityBill++, src);
+  // src = src + "}";
 
-      Serial.printf("Set string.Enrgy %s\n", Firebase.RTDB.setString(&fbdo,  urlSetEnrgy, src) ? "ok" : fbdo.errorReason().c_str()); 
+  // Serial.println(src);
+
+  // Serial.printf("Set string.Enrgy %s\n", Firebase.RTDB.setString(&fbdo,  urlSetEnrgy, src) ? "ok" : fbdo.errorReason().c_str()); 
+
+  // delay(1000);
       
-      Serial.print("Voltage: ");      Serial.print(voltage);      Serial.println("V");
-      Serial.print("Current: ");      Serial.print(current);      Serial.println("A");
-      Serial.print("Power: ");        Serial.print(power);        Serial.println("W");
-      Serial.print("Energy: ");       Serial.print(energy, 3);     Serial.println("kWh");
-      Serial.print("Frequency: ");    Serial.print(frequency, 1); Serial.println("Hz");
-      Serial.print("PF: ");           Serial.println(pf);
-      Serial.print("Electricity bill: ");    Serial.print(electricityBill); Serial.println("VND");
+ if( millis() - t1 > 2000){
+   Serial.print("Custom Address:");
+   Serial.println(pzem.readAddress(), HEX);
+   
+   //Reset the data of energy
+
+   
+   // Read the data from the sensor
+   
+   float voltage = pzem.voltage();
+   float current = pzem.current();
+   float power = pzem.power();
+   float energy = pzem.energy();
+   float frequency = pzem.frequency();
+   float pf = pzem.pf();
+   
+   unsigned long electricityBill = 0;
+   unsigned int bac1 = 1678, bac2 = 1734, bac3 = 2014, bac4 = 2536, bac5 = 2834, bac6 = 2927;
+  
+   if(energy <= 50){
+     electricityBill += energy*bac1;
+   }
+   else if(energy <= 100){
+     electricityBill += (energy - 50)*bac2 + 50*bac1;
+   }   
+   else if(energy <= 200){
+     electricityBill += (energy - 100)*bac3 + 50*bac2 + 50*bac1;
+   }
+   else if(energy <= 300){
+     electricityBill += (energy - 200)*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
+   }
+   else if(energy <= 400){
+     electricityBill += (energy - 300)*bac5 + 100*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
+   }
+   else{
+     electricityBill += (energy - 400)*bac6 + 100*bac5 + 100*bac4 + 100*bac3 + 50*bac2 + 50*bac1;
+   }
+
+   // Check if the data is valid
+   if (isnan(voltage)) {
+     Serial.println("Error reading voltage");
+   } else if (isnan(current)) {
+     Serial.println("Error reading current");
+   } else if (isnan(power)) {
+     Serial.println("Error reading power");
+   } else if (isnan(energy)) {
+     Serial.println("Error reading energy");
+   } else if (isnan(frequency)) {
+     Serial.println("Error reading frequency");
+   } else if (isnan(pf)) {
+     Serial.println("Error reading power factor");
+   } else {
+     src = formatJsonString("voltage", voltage, src);
+     src = formatJsonString("current", current, src);
+     src = formatJsonString("power", power, src);
+     src = formatJsonString("energytage", energy, src);
+     src = formatJsonString("pf", pf, src);
+     src = formatJsonString("frequency", frequency, src);
+     src = formatJsonString("electricityBill", electricityBill, src);
+     src = src + "}";
+
+     Serial.println(src);
+
+     Serial.printf("Set string.Enrgy %s\n", Firebase.RTDB.setString(&fbdo,  urlSetEnrgy, src) ? "ok" : fbdo.errorReason().c_str()); 
+     
+     Serial.print("Voltage: ");      Serial.print(voltage);      Serial.println("V");
+     Serial.print("Current: ");      Serial.print(current);      Serial.println("A");
+     Serial.print("Power: ");        Serial.print(power);        Serial.println("W");
+     Serial.print("Energy: ");       Serial.print(energy, 3);     Serial.println("kWh");
+     Serial.print("Frequency: ");    Serial.print(frequency, 1); Serial.println("Hz");
+     Serial.print("PF: ");           Serial.println(pf);
+     Serial.print("Electricity bill: ");    Serial.print(electricityBill); Serial.println("VND");
+   }
+   Serial.println();
+   t1 = millis();
+ }
+}
+
+void handleResetEnergy(){
+    String isResetEnergy = Firebase.RTDB.getString(&fbdo, urlRequestEnrgy) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
+    if(isResetEnergy == "true"){
+        pzem.resetEnergy();
+        Serial.printf("Set string.Reset enrgy %s\n", Firebase.RTDB.setString(&fbdo,  urlRequestEnrgy, "false") ? "ok" : fbdo.errorReason().c_str()); 
     }
-    Serial.println();
-    t1 = millis();
-  }
 }
 
 
@@ -491,6 +516,7 @@ void loop() {
       if(isSetupURL){
         handleTurnOnOff();
         handleResetEeprom();  
+        handleResetEnergy();
 
        if(isCheckExistEsp == false) {
           handleCheckEspExistOnFirebase();
@@ -499,8 +525,6 @@ void loop() {
         if(isCheckExistEsp && isConnectedEspWithFirebase == false && userIdGlobalValue){
          handleCheckConnected();
         } 
-
-        dataElectricityMeter();
       };
 
      
