@@ -6,6 +6,7 @@
 - Install ESP8266 from Tools/Boards Manager and then choose NODE_MCU 1.0
 - Install WifiManger: https://github.com/tzapu/WiFiManager in to LIB + Add lib by .zip file
 - Install Firebase-ESP-Client : https://github.com/mobizt/Firebase-ESP-Client + Add lib by .zip file 
+- Install PZEM ttps://github.com/mandulaj/PZEM-004T-v30 + Add lib by .zip file 
 - Copy folder SD to libraries of the ardunos in the documents folders
 
 ## Generate QR CODE
