@@ -399,9 +399,7 @@ String formatJsonString(String key, int value, String src){
 /*PZEM*/
  int voltage = 0, current = 100, power = 200, energytage = 300, pf = 400, frequency = 500, electricityBill = 1000;
 void dataElectricityMeter(){
-  // String src = "{";
-
- 
+  String src = "{";
 
   // src = formatJsonString("voltage", voltage++, src);
   // src = formatJsonString("current", current++, src);
