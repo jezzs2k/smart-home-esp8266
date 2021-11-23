@@ -25,7 +25,6 @@ unsigned long t1 = 0;
 /*DEFAULT_VALUE*/
 String idThisEsp = "";
 const char *ssidLocal = "SMART_HOME_ESP8266";
-const char *passwordLocal = "11111111";
 int maxSizeEeprom = 210;
 /*------------------------------------------------------*/
 
@@ -282,7 +281,7 @@ void setup() {
       digitalWrite(13,LOW);
       digitalWrite(15,HIGH);
       Serial.println("Setup wifi:");
-      WiFi.softAP(ssidLocal, passwordLocal);
+      WiFi.softAP(ssidLocal);
       Serial.print("Ip of ESP:");
       Serial.println(WiFi.softAPIP());
       server.on("/", connectIpEsp);
