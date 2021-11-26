@@ -4,7 +4,7 @@
 #include <EEPROM.h>
 #include <WiFiManager.h>
 #include <Firebase_ESP_Client.h>
-#include <HTML.h>
+#include "HTML.h"
 #include <PZEM004Tv30.h>
 
 /*Setup PZEM*/
@@ -25,7 +25,7 @@ unsigned long t1 = 0;
 /*DEFAULT_VALUE*/
 String idThisEsp = "";
 const char *ssidLocal = "SMART_HOME_ESP8266";
-int maxSizeEeprom = 210;
+int maxSizeEeprom = 512;
 /*------------------------------------------------------*/
 
 /*Global value*/
@@ -87,6 +87,7 @@ void cleanEEProm (int from, int to, bool isResetEsp = true){
 
   for (int i = from; i < to; ++i) {
      EEPROM.write(i, 0);
+     delay(5);
   };
  
   EEPROM.commit();
@@ -112,7 +113,8 @@ void addDataToEeprom (int pos, String name, String data) {
     if(String(char(data[i])) != "" || String(char(data[i])) != " "){
       EEPROM.write(i + pos, data[i]);
       Serial.print("write: ");
-      Serial.println(data[i]); 
+      Serial.println(data[i]);
+      delay(5); 
     }  
    };
 };
@@ -127,10 +129,10 @@ String readDataFromEeprom(int from, int to, String name){
   for (int i = from; i < to; ++i)
   {
 
-    if(String(char(EEPROM.read(i))) != "" || String(EEPROM.read(i)) != " "){
+    if(String(char(EEPROM.read(i))) != "" /*|| String(EEPROM.read(i)) != " "*/){
       value += String(char(EEPROM.read(i)));
     }
-    
+    delay(10);
   };
 
   return value;
@@ -218,7 +220,6 @@ void setupFirebase () {
 
 void setupLedStatus () {
   pinMode(D6, OUTPUT);
-  pinMode(D5, INPUT);
   digitalWrite(D6,HIGH);
 }
 
@@ -257,8 +258,6 @@ void setup() {
   WiFi.begin(nameWifi, password);
 
   setupLedStatus();
-
-//  cleanEEProm(0, maxSizeEeprom);
   
   if (checkWifi())
   {
@@ -345,16 +344,6 @@ void handleCheckEspExistOnFirebase () {
     };
 }
 
-void handleLedD6Status () {
-  bool button_pin5 = digitalRead(D5);
-  if (button_pin5 == 0){
-    digitalWrite(D6, LOW);
-  }
-  if (button_pin5 == 1){
-    digitalWrite(D6, HIGH);
-  }
-}
-
 void handleSetupURL(String idEsp) {
   String id = "";
   for(int i = 0; i < 36; ++i){
@@ -396,7 +385,7 @@ String formatJsonString(String key, int value, String src){
 
 
 /*PZEM*/
- int voltage = 0, current = 100, power = 200, energytage = 300, pf = 400, frequency = 500, electricityBill = 1000;
+// float voltage = 0, current = 0, power = 0, energytage = 0, pf = 0, frequency = 0, electricityBill = 0;
 void dataElectricityMeter(){
   String src = "{";
 
@@ -431,7 +420,7 @@ void dataElectricityMeter(){
    float frequency = pzem.frequency();
    float pf = pzem.pf();
    
-   unsigned long electricityBill = 0;
+   double electricityBill = 0;
    unsigned int bac1 = 1678, bac2 = 1734, bac3 = 2014, bac4 = 2536, bac5 = 2834, bac6 = 2927;
   
    if(energy <= 50){
@@ -486,7 +475,7 @@ void dataElectricityMeter(){
      Serial.print("Energy: ");       Serial.print(energy, 3);     Serial.println("kWh");
      Serial.print("Frequency: ");    Serial.print(frequency, 1); Serial.println("Hz");
      Serial.print("PF: ");           Serial.println(pf);
-     Serial.print("Electricity bill: ");    Serial.print(electricityBill); Serial.println("VND");
+     Serial.print("Electricity bill: ");    Serial.print(electricityBill, 0); Serial.println("VND");
    }
    Serial.println();
    t1 = millis();
