@@ -26,6 +26,7 @@ unsigned long t1 = 0;
 String idThisEsp = "";
 const char *ssidLocal = "SMART_HOME_ESP8266";
 int maxSizeEeprom = 512;
+int timeReconnect = 0;
 /*------------------------------------------------------*/
 
 /*Global value*/
@@ -218,18 +219,9 @@ void setupFirebase () {
   isFirebaseConnected = true;
 }
 
-void setupLedStatus () {
-  pinMode(D6, OUTPUT);
-  digitalWrite(D6,HIGH);
-}
-
-void setup() {
-  pinMode(13,OUTPUT); //  green led
-  pinMode(15,OUTPUT); //  red led
-  EEPROM.begin(512); //Initialasing EEPROM
-  Serial.begin(115200);
+void setupWifi(){
   WiFi.disconnect();
-  WiFi.mode(WIFI_STA); //(Set up a soft access point to establish a WiFi network)
+  WiFi.mode(WIFI_STA);
   
   String nameWifi = "";
   String password = "";
@@ -249,16 +241,35 @@ void setup() {
   Serial.println(idThisEsp);
   Serial.println();
 
-  userIdGlobalValue = readDataFromEeprom(160, maxSizeEeprom, "User ID");
+  userIdGlobalValue = readDataFromEeprom(160, 250, "User ID");
   Serial.print("UserId: ");
   Serial.println(userIdGlobalValue);
   Serial.println();
 
 
-  WiFi.begin(nameWifi, password);
+  WiFi.begin(nameWifi, password);  
+  timeReconnect ++;
 
-  setupLedStatus();
-  
+  if(timeReconnect > 11 || nameWifi == ""){
+    Serial.print("TimeReconnect:");
+    Serial.println(timeReconnect);
+    timeReconnect = 0;
+    isConnectWifi = false;
+    digitalWrite(13,LOW);
+    digitalWrite(15,HIGH);
+    Serial.println("Setup wifi:");
+    WiFi.softAP(ssidLocal);
+    Serial.print("Ip of ESP:");
+    Serial.println(WiFi.softAPIP());
+    server.on("/", connectIpEsp);
+    server.on("/setup", setupEsp);
+    server.begin();
+  }
+}
+
+void checkWifiSetup(){
+    Serial.print("checkWifiSetup:");
+    Serial.println(timeReconnect);
   if (checkWifi())
   {
     isConnectWifi = true;
@@ -276,17 +287,15 @@ void setup() {
   }
   else {  
       isConnectWifi = false;
-      
-      digitalWrite(13,LOW);
-      digitalWrite(15,HIGH);
-      Serial.println("Setup wifi:");
-      WiFi.softAP(ssidLocal);
-      Serial.print("Ip of ESP:");
-      Serial.println(WiFi.softAPIP());
-      server.on("/", connectIpEsp);
-      server.on("/setup", setupEsp);
-      server.begin();
+      setupWifi();
   }
+}
+
+void setup() {
+  EEPROM.begin(512);
+  Serial.begin(115200);
+
+  setupWifi();
 }
 
 void handleTurnOnOff() {
@@ -335,10 +344,11 @@ void handleResetEeprom() {
 
 void handleCheckEspExistOnFirebase () {
     String checkEsp = Firebase.RTDB.getString(&fbdo, urlCheckEspExistOnFirebase) ? fbdo.to<const char *>() : fbdo.errorReason().c_str();
-
+    handleCheckConnected();
     Serial.println("check esp ...");
     Serial.println(checkEsp);
     isCheckExistEsp = true;
+    
     if(checkEsp == "null") {
       cleanEEProm(0, maxSizeEeprom);
     };
@@ -381,6 +391,12 @@ String formatJsonString(String key, int value, String src){
   src = src + key + ":" + (String)value + ",";
 
   return src;
+}
+
+void saveDataElectricityMerer(String src){
+  Serial.println(src);
+
+  Serial.printf("Set string.Enrgy %s\n", Firebase.RTDB.setString(&fbdo,  urlSetEnrgy, src) ? "ok" : fbdo.errorReason().c_str());   
 }
 
 
@@ -465,9 +481,7 @@ void dataElectricityMeter(){
      src = formatJsonString("electricityBill", electricityBill, src);
      src = src + "}";
 
-     Serial.println(src);
-
-     Serial.printf("Set string.Enrgy %s\n", Firebase.RTDB.setString(&fbdo,  urlSetEnrgy, src) ? "ok" : fbdo.errorReason().c_str()); 
+     saveDataElectricityMerer(src);
      
      Serial.print("Voltage: ");      Serial.print(voltage);      Serial.println("V");
      Serial.print("Current: ");      Serial.print(current);      Serial.println("A");
@@ -493,7 +507,15 @@ void handleResetEnergy(){
 
 void loop() {
  server.handleClient();
+ Serial.print("WiFiStatus");
+ Serial.println(WiFi.status());
+ if(WiFi.status() != WL_CONNECTED){
+   checkWifiSetup();
+   delay(1000);
+ }
+ 
  if(isConnectWifi){
+    timeReconnect = 0;
     if(isFirebaseConnected) {
       if(isSetupURL == false) {
         handleSetupURL(idThisEsp);  
@@ -507,13 +529,7 @@ void loop() {
        if(isCheckExistEsp == false) {
           handleCheckEspExistOnFirebase();
         }
-
-        if(isCheckExistEsp && isConnectedEspWithFirebase == false && userIdGlobalValue){
-         handleCheckConnected();
-        } 
       };
-
-     
      }
 
     if(idThisEsp != "" && isFirebaseConnected == false){
