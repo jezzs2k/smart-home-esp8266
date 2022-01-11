@@ -512,11 +512,11 @@ void loop() {
  Serial.println(WL_CONNECTED);
 
  Serial.print("nameWifi-");
- Serial.println(nameWifi.length);
+ Serial.println(nameWifi.length());
   Serial.print("password-");
- Serial.println(password.length);
+ Serial.println(password.length());
 
- if(WiFi.status() != WL_CONNECTED && nameWifi.length > 1 && password.length > 1){
+ if(WiFi.status() != WL_CONNECTED && nameWifi.length() > 1 && password.length() > 1){
    checkWifiSetup();
    delay(1000);
  }
