@@ -40,6 +40,8 @@ String turnOnValue = "";
 String isResetEepromUserId = "";
 String isResetEeprom = "";
 bool isCheckExistEsp = false;
+String nameWifi = "";
+String password = "";
 /*------------------------------------------------------*/
 
 /*Firebase CONFIG*/
@@ -222,9 +224,6 @@ void setupFirebase () {
 void setupWifi(){
   WiFi.disconnect();
   WiFi.mode(WIFI_STA);
-  
-  String nameWifi = "";
-  String password = "";
 
   nameWifi = readDataFromEeprom(0, 32, "WIFI NAME");
   Serial.print("Name wifi: ");
@@ -507,9 +506,17 @@ void handleResetEnergy(){
 
 void loop() {
  server.handleClient();
- Serial.print("WiFiStatus");
+ Serial.print("WiFiStatus-");
  Serial.println(WiFi.status());
- if(WiFi.status() != WL_CONNECTED){
+ Serial.print("WL_CONNECTED-");
+ Serial.println(WL_CONNECTED);
+
+ Serial.print("nameWifi-");
+ Serial.println(nameWifi.length);
+  Serial.print("password-");
+ Serial.println(password.length);
+
+ if(WiFi.status() != WL_CONNECTED && nameWifi.length > 1 && password.length > 1){
    checkWifiSetup();
    delay(1000);
  }
